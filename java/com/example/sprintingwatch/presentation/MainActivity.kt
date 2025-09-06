@@ -56,36 +56,9 @@ class MainActivity : ComponentActivity() {
         val button: Button = findViewById<Button>(R.id.button)
         val rssiText: TextView = findViewById<TextView>(R.id.rssiText)
 
-//        var wifiInfo: WifiInfo? = null
-//
-//        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-//        val activeNetwork = connectivityManager.activeNetwork
-//        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-//
-//        if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-//            wifiInfo = networkCapabilities.transportInfo as? WifiInfo
-//        }
-//
-//        val rssi: Int = wifiInfo?.rssi ?: Log.d("ERROR", "Can't find RSSI")  // in dBm
-//        val frequency: Int = wifiInfo?.frequency ?: Log.d("ERROR", "Can't find Frequency")
-//        val ssid = wifiInfo?.ssid ?: Log.d("ERROR", "Can't find SSID")
-//        val linkSpeed: Int = wifiInfo?.linkSpeed ?: Log.d("ERROR", "Can't find Link Speed")
-//
-//
-//        Log.d("WifiInfo", "RSSI: $rssi dBm")
-//        Log.d("WifiName", "SSID: $ssid, Frequency: $frequency MHz, Link Speed: $linkSpeed")
-
-
         button.setOnClickListener {
-            var wifiInfo: WifiInfo? = null
-
-            val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val activeNetwork = connectivityManager.activeNetwork
-            val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-
-            if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                wifiInfo = networkCapabilities.transportInfo as? WifiInfo
-            }
+            //Object for collecting information on the Wifi (RSSI)
+            val wifiInfo: WifiInfo? = findWifi()
 
             val rssi: Int = wifiInfo?.rssi ?: Log.d("ERROR", "Can't find RSSI")  // in dBm
             val frequency: Int = wifiInfo?.frequency ?: Log.d("ERROR", "Can't find Frequency")
@@ -93,6 +66,7 @@ class MainActivity : ComponentActivity() {
             val linkSpeed: Int = wifiInfo?.linkSpeed ?: Log.d("ERROR", "Can't find Link Speed")
 
 
+            //Logs to test wifi
             Log.d("WifiInfo", "RSSI: $rssi dBm")
             Log.d("WifiName", "SSID: $ssid, Frequency: $frequency MHz, Link Speed: $linkSpeed")
 
@@ -101,6 +75,19 @@ class MainActivity : ComponentActivity() {
 
 
 
+    }
 
+    fun findWifi(): WifiInfo? {
+        var wifiInfo: WifiInfo? = null
+
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetwork
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+
+        if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            wifiInfo = networkCapabilities.transportInfo as? WifiInfo
+        }
+
+        return wifiInfo
     }
 }
