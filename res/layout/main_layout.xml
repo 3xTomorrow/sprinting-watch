@@ -15,7 +15,7 @@
         android:layout_marginEnd="84dp"
         android:fontFamily="sans-serif"
         android:gravity="center|top"
-        android:text="Press Button to see RSSI"
+        android:text="Timer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.492"
         app:layout_constraintStart_toStartOf="parent"
@@ -23,17 +23,31 @@
 
     <Button
         android:id="@+id/button"
-        android:layout_width="115dp"
-        android:layout_height="49dp"
-        android:layout_marginStart="53dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="53dp"
+        android:layout_width="71dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="20dp"
         android:gravity="center"
-        android:text="Button"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.482"
+        android:text="Start"
+        app:layout_constraintBottom_toTopOf="@+id/rssiText"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/titleText" />
+        app:layout_constraintTop_toBottomOf="@+id/titleText"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="71dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:text="Reset"
+        app:layout_constraintBottom_toTopOf="@+id/rssiText"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleText"
+        app:layout_constraintVertical_bias="1.0" />
 
     <TextView
         android:id="@+id/rssiText"
@@ -43,7 +57,7 @@
         android:layout_marginEnd="65dp"
         android:layout_marginBottom="36dp"
         android:gravity="center"
-        android:text="RSSI Here"
+        android:text="Time Here"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"

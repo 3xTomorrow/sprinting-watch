@@ -28,16 +28,21 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresPermission
 import org.w3c.dom.Text
+import java.util.Timer
+import java.util.TimerTask
+
 
 class MainActivity : ComponentActivity() {
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("SetTextI18n", "MissingInflatedId")
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -47,42 +52,64 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.main_layout)
 
         //Creates variables for the button and the RSSI
-        val button: Button = findViewById<Button>(R.id.button)
+        val startButton: Button = findViewById<Button>(R.id.button)
+        val resetButton: Button = findViewById<Button>(R.id.button2)
         val rssiText: TextView = findViewById<TextView>(R.id.rssiText)
 
-        button.setOnClickListener {
-            //Object for collecting information on the Wifi (RSSI)
-            val wifiInfo: WifiInfo? = findWifi()
+//       startButton.setOnClickListener {
+//           runOnUiThread {
+//               var wifiInfo: WifiInfo? = null
+//
+//               val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+//               val activeNetwork = connectivityManager.activeNetwork
+//               val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+//
+//               if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+//                   wifiInfo = networkCapabilities.transportInfo as? WifiInfo
+//               }
+//
+//               val rssi: Int = wifiInfo?.rssi ?: Log.d("ERROR", "Can't find RSSI")  // in dBm
+//               val frequency: Int = wifiInfo?.frequency ?: Log.d("ERROR", "Can't find Frequency")
+//               val ssid = wifiInfo?.ssid ?: Log.d("ERROR", "Can't find SSID")
+//               val linkSpeed: Int = wifiInfo?.linkSpeed ?: Log.d("ERROR", "Can't find Link Speed")
+//
+//
+//               //Logs to test wifi
+//               Log.d("WifiInfo", "RSSI: $rssi dBm")
+//               Log.d("WifiName", "SSID: $ssid, Frequency: $frequency MHz, Link Speed: $linkSpeed")
+//
+//
+//               rssiText.text = "$rssi dBm"
+//           }
+//       }
 
-            val rssi: Int = wifiInfo?.rssi ?: Log.d("ERROR", "Can't find RSSI")  // in dBm
-            val frequency: Int = wifiInfo?.frequency ?: Log.d("ERROR", "Can't find Frequency")
-            val ssid = wifiInfo?.ssid ?: Log.d("ERROR", "Can't find SSID")
-            val linkSpeed: Int = wifiInfo?.linkSpeed ?: Log.d("ERROR", "Can't find Link Speed")
 
+        val timer = Timer()
 
-            //Logs to test wifi
-            Log.d("WifiInfo", "RSSI: $rssi dBm")
-            Log.d("WifiName", "SSID: $ssid, Frequency: $frequency MHz, Link Speed: $linkSpeed")
+        startButton.setOnClickListener {
+            val beginningTime: Long = System.currentTimeMillis() /1000
 
-            rssiText.text = "$rssi dBm"
+            val task = object : TimerTask() {
+                override fun run() {
+
+                    val endTime: Long = System.currentTimeMillis() / 1000
+                    runOnUiThread {
+                        val timeElapsed: Long = endTime - beginningTime
+                        rssiText.text = "$timeElapsed"
+                    }
+                }
+            }
+
+            timer.schedule(task, 0, 1000)
+        }
+
+        resetButton.setOnClickListener {
+            timer.cancel()
         }
 
 
 
-    }
 
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-    fun findWifi(): WifiInfo? {
-        var wifiInfo: WifiInfo? = null
 
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork = connectivityManager.activeNetwork
-        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-
-        if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-            wifiInfo = networkCapabilities.transportInfo as? WifiInfo
-        }
-
-        return wifiInfo
     }
 }
