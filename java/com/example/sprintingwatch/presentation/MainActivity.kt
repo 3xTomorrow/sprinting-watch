@@ -1,8 +1,3 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter to find the
- * most up to date changes to the libraries and their usages.
- */
-
 package com.example.sprintingwatch.presentation
 
 import android.Manifest
@@ -29,7 +24,6 @@ import androidx.compose.ui.test.isEnabled
 import com.example.sprintingwatch.R
 import com.example.sprintingwatch.presentation.theme.SprintingWatchTheme
 import kotlin.random.Random
-
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -77,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun findWifi(): WifiInfo? {
         var wifiInfo: WifiInfo? = null
 
