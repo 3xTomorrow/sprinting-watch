@@ -40,6 +40,12 @@ import java.util.Timer
 import java.util.TimerTask
 
 
+enum class TimerStates {
+    INITIAL,
+    RUNNING,
+    CANCELLED
+}
+
 class MainActivity : ComponentActivity() {
 
     @SuppressLint("SetTextI18n", "MissingInflatedId")
@@ -84,27 +90,37 @@ class MainActivity : ComponentActivity() {
 //       }
 
 
+
+        //Reformat timer to only start once, (add timerStarted bool value, etc.)
+        //Fix the timer crashing when timer is started after resetting.
         val timer = Timer()
+        var beginningTime: Long = System.currentTimeMillis() /1000
+        var timerStates: TimerStates = TimerStates.INITIAL
 
-        startButton.setOnClickListener {
-            val beginningTime: Long = System.currentTimeMillis() /1000
+        val task = object : TimerTask() {
+            override fun run() {
 
-            val task = object : TimerTask() {
-                override fun run() {
-
-                    val endTime: Long = System.currentTimeMillis() / 1000
-                    runOnUiThread {
-                        val timeElapsed: Long = endTime - beginningTime
-                        rssiText.text = "$timeElapsed"
-                    }
+                val endTime: Long = System.currentTimeMillis() / 1000
+                runOnUiThread {
+                    val timeElapsed: Long = endTime - beginningTime
+                    rssiText.text = "$timeElapsed"
                 }
             }
+        }
 
-            timer.schedule(task, 0, 1000)
+        startButton.setOnClickListener {
+            if(timerStates == TimerStates.INITIAL) {
+                beginningTime = System.currentTimeMillis() /1000
+                timer.schedule(task, 0, 1000)
+                timerStates = TimerStates.RUNNING
+            }
         }
 
         resetButton.setOnClickListener {
-            timer.cancel()
+            if(timerStates == TimerStates.RUNNING) {
+                timer.cancel()
+                timerStates = TimerStates.CANCELLED
+            }
         }
 
 
