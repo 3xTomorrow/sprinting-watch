@@ -4,45 +4,20 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
-import androidx.wear.tooling.preview.devices.WearDevices
-import androidx.compose.ui.test.isEnabled
 import com.example.sprintingwatch.R
-import com.example.sprintingwatch.presentation.theme.SprintingWatchTheme
-import kotlin.random.Random
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiInfo
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresPermission
-import org.w3c.dom.Text
-import java.util.Timer
-import java.util.TimerTask
+import kotlinx.coroutines.Runnable
 
 
 enum class TimerStates {
     INITIAL,
     RUNNING,
+    PAUSED,
     CANCELLED
 }
 
@@ -58,8 +33,9 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.main_layout)
 
         //Creates variables for the button and the RSSI
-        val startButton: Button = findViewById<Button>(R.id.button)
-        val resetButton: Button = findViewById<Button>(R.id.button2)
+        val startButton: Button = findViewById<Button>(R.id.start_button)
+        val resetButton: Button = findViewById<Button>(R.id.reset_button)
+        val pauseButton: Button = findViewById<Button>(R.id.pause_button)
         val rssiText: TextView = findViewById<TextView>(R.id.rssiText)
 
 //       startButton.setOnClickListener {
@@ -89,43 +65,66 @@ class MainActivity : ComponentActivity() {
 //           }
 //       }
 
+        var states: TimerStates = TimerStates.INITIAL
+        val timer = HandlerTimer()
 
-
-        //Reformat timer to only start once, (add timerStarted bool value, etc.)
-        //Fix the timer crashing when timer is started after resetting.
-        val timer = Timer()
-        var beginningTime: Long = System.currentTimeMillis() /1000
-        var timerStates: TimerStates = TimerStates.INITIAL
-
-        val task = object : TimerTask() {
-            override fun run() {
-
-                val endTime: Long = System.currentTimeMillis() / 1000
-                runOnUiThread {
-                    val timeElapsed: Long = endTime - beginningTime
-                    rssiText.text = "$timeElapsed"
-                }
+        startButton.setOnClickListener {
+            if (states == TimerStates.INITIAL || states == TimerStates.CANCELLED) {
+                timer.start(rssiText)
+                states = TimerStates.RUNNING
+            } else if (states == TimerStates.PAUSED) {
+                timer.resume()
+                states = TimerStates.RUNNING
             }
         }
 
-        startButton.setOnClickListener {
-            if(timerStates == TimerStates.INITIAL) {
-                beginningTime = System.currentTimeMillis() /1000
-                timer.schedule(task, 0, 1000)
-                timerStates = TimerStates.RUNNING
+        pauseButton.setOnClickListener {
+            if (states == TimerStates.RUNNING) {
+                timer.pause()
+                states = TimerStates.PAUSED
             }
         }
 
         resetButton.setOnClickListener {
-            if(timerStates == TimerStates.RUNNING) {
-                timer.cancel()
-                timerStates = TimerStates.CANCELLED
+            if(states == TimerStates.RUNNING || states == TimerStates.PAUSED) {
+                rssiText.text = "0"
+                timer.reset()
+                states = TimerStates.CANCELLED
             }
         }
-
-
-
-
-
     }
+}
+
+class HandlerTimer {
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var runnable: Runnable
+    private var isPaused = false
+    private var time = 0
+
+    @SuppressLint("SetTextI18n")
+    fun start(text: TextView) {
+        runnable = Runnable {
+            if(!isPaused) {
+                text.text = "$time"
+                time++
+            }
+            handler.postDelayed(runnable, 1000)
+        }
+        handler.post(runnable )
+    }
+
+    fun pause() {
+        isPaused = true
+    }
+
+    fun resume() {
+        isPaused = false
+    }
+
+    fun reset() {
+        handler.removeCallbacks(runnable)
+        time = 0
+        isPaused = false
+    }
+
 }
