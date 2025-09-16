@@ -17,6 +17,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.Runnable
+import kotlin.arrayOf
 
 enum class TimerStates {
     INITIAL,
@@ -27,8 +28,9 @@ enum class TimerStates {
 
 class MainActivity : ComponentActivity() {
 
+
     @SuppressLint("SetTextI18n", "MissingInflatedId", "ServiceCast")
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    @RequiresPermission(allOf= [Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.ACCESS_FINE_LOCATION])
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
