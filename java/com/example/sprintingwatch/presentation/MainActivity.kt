@@ -46,7 +46,6 @@ class MainActivity : ComponentActivity() {
         lateinit var runnable: Runnable
 
 
-
         //Logs to test wifi
 //        Log.d("WifiInfo", "RSSI: $rssi dBm")
 //        Log.d("WifiName", "SSID: $ssid, Frequency: $frequency MHz, Link Speed: $linkSpeed")
@@ -66,12 +65,20 @@ class MainActivity : ComponentActivity() {
                 wifiInfo = networkCapabilities.transportInfo as? WifiInfo
             }
 
-            val rssi: Int = wifiInfo?.rssi ?: Log.d("ERROR", "Can't find RSSI")  // in dBm
-            val frequency: Int = wifiInfo?.frequency ?: Log.d("ERROR", "Can't find Frequency")
-            val ssid = wifiInfo?.ssid ?: Log.d("ERROR", "Can't find SSID")
-            val linkSpeed: Int = wifiInfo?.linkSpeed ?: Log.d("ERROR", "Can't find Link Speed")
+            val rssi: Int = wifiInfo?.rssi ?: 10  // in dBm (10 for null value rather than -1 because -1 is a possible value of RSSI while 10 is not)
+            val frequency: Int = wifiInfo?.frequency ?: -1
+            val ssid = wifiInfo?.ssid ?: "Unknown"
+            val linkSpeed: Int = wifiInfo?.linkSpeed ?: -1
 
-            Log.d("WifiInfo", "RSSI: $rssi dBm")
+            if(rssi != 10)
+                Log.d("WifiInfo", "RSSI: $rssi")
+            else
+                Log.d("WifiInfo", "No Wi-Fi connection")
+
+            if(rssi != 10)
+                rssiText.text = "$rssi"
+            else
+                rssiText.text = "No Wi-Fi signal"
 
             //rssiText.text = "$rssi dBm"
             handler.postDelayed(runnable, 1000)
