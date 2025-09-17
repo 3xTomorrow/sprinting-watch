@@ -44,43 +44,49 @@ class MainActivity : ComponentActivity() {
         val pauseButton: Button = findViewById<Button>(R.id.pause_button)
         val rssiText: TextView = findViewById<TextView>(R.id.rssiText)
 
+        //Event Loop Variables
         val handler = Handler(Looper.getMainLooper())
         lateinit var runnable: Runnable
 
-
-        //Logs to test wifi
-//        Log.d("WifiInfo", "RSSI: $rssi dBm")
-//        Log.d("WifiName", "SSID: $ssid, Frequency: $frequency MHz, Link Speed: $linkSpeed")
-
-
+        //WiFi Variables
         var wifiInfo: WifiInfo? = null
 
+        //Other Variables
+        var gettingRSSI: Boolean = false
+
+        //Button Functions that change whether the program should be gathering RSSI or not.
+        startButton.setOnClickListener { gettingRSSI = true }
+        pauseButton.setOnClickListener { gettingRSSI = false }
 
 
         runnable = Runnable {
+            if (gettingRSSI) {
+                val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val activeNetwork = connectivityManager.activeNetwork
+                val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
 
-            val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val activeNetwork = connectivityManager.activeNetwork
-            val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+                if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    wifiInfo = networkCapabilities.transportInfo as? WifiInfo
+                }
 
-            if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                wifiInfo = networkCapabilities.transportInfo as? WifiInfo
-            }
+                val rssi: Int = wifiInfo?.rssi ?: 10  // in dBm (10 for null value rather than -1 because -1 is a possible value of RSSI while 10 is not)
+                val frequency: Int = wifiInfo?.frequency ?: -1
+                val ssid = wifiInfo?.ssid ?: "Unknown"
+                val linkSpeed: Int = wifiInfo?.linkSpeed ?: -1
 
-            val rssi: Int = wifiInfo?.rssi ?: 10  // in dBm (10 for null value rather than -1 because -1 is a possible value of RSSI while 10 is not)
-            val frequency: Int = wifiInfo?.frequency ?: -1
-            val ssid = wifiInfo?.ssid ?: "Unknown"
-            val linkSpeed: Int = wifiInfo?.linkSpeed ?: -1
+                if(rssi != 10)
+                    Log.d("WifiInfo", "RSSI: $rssi")
+                else
+                    Log.d("WifiInfo", "No Wi-Fi connection")
 
-            if(rssi != 10)
-                Log.d("WifiInfo", "RSSI: $rssi")
-            else
-                Log.d("WifiInfo", "No Wi-Fi connection")
+                if(rssi != 10)
+                    rssiText.text = "$rssi"
+                else
+                    rssiText.text = "No Wi-Fi signal"
 
-            if(rssi != 10)
-                rssiText.text = "$rssi"
-            else
-                rssiText.text = "No Wi-Fi signal"
+            } else {
+                rssiText.text = "Not getting RSSI"
+        }
 
             //rssiText.text = "$rssi dBm"
             handler.postDelayed(runnable, 1000)
@@ -118,37 +124,3 @@ class MainActivity : ComponentActivity() {
 //        }
     }
 }
-
-//class HandlerTimer {
-//    private val handler = Handler(Looper.getMainLooper())
-//    private lateinit var runnable: Runnable
-//    private var isPaused = false
-//    private var time = 0
-//
-//    @SuppressLint("SetTextI18n")
-//    fun start(text: TextView) {
-//        runnable = Runnable {
-//            if(!isPaused) {
-//                text.text = "$time"
-//                time++
-//            }
-//            handler.postDelayed(runnable, 1000)
-//        }
-//        handler.post(runnable )
-//    }
-//
-//    fun pause() {
-//        isPaused = true
-//    }
-//
-//    fun resume() {
-//        isPaused = false
-//    }
-//
-//    fun reset() {
-//        handler.removeCallbacks(runnable)
-//        time = 0
-//        isPaused = false
-//    }
-//
-//}
