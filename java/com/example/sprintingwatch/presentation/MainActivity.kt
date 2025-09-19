@@ -38,11 +38,15 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.main_layout)
 
-        //Creates variables for the button and the RSSI
-        val startButton: Button = findViewById<Button>(R.id.start_button)
-        val resetButton: Button = findViewById<Button>(R.id.reset_button)
-        val pauseButton: Button = findViewById<Button>(R.id.pause_button)
-        val rssiText: TextView = findViewById<TextView>(R.id.rssiText)
+        //Creates variables for the button
+        val startButton: Button = findViewById(R.id.start_button)
+        val resetButton: Button = findViewById(R.id.reset_button)
+        val pauseButton: Button = findViewById(R.id.pause_button)
+
+        //Creates variables for the texts
+        val reachGoalText: TextView = findViewById(R.id.reachedGoalText)
+        val rssiText: TextView = findViewById(R.id.rssiText)
+        val elapsedTimeText: TextView = findViewById(R.id.elapsedTimeText)
 
         //Event Loop Variables
         val handler = Handler(Looper.getMainLooper())
@@ -53,14 +57,27 @@ class MainActivity : ComponentActivity() {
 
         //Other Variables
         var gettingRSSI: Boolean = false
+        var reachedFinishLine: Boolean = false
+        var paused: Boolean = true
+        var elapsedTime: Double = 0.0
 
         //Button Functions that change whether the program should be gathering RSSI or not.
-        startButton.setOnClickListener { gettingRSSI = true }
-        pauseButton.setOnClickListener { gettingRSSI = false }
+        startButton.setOnClickListener {
+            gettingRSSI = true
+            paused = false
+        }
+        pauseButton.setOnClickListener {
+            gettingRSSI = false
+            paused = true
+        }
+
 
 
         runnable = Runnable {
             if (gettingRSSI) {
+
+                elapsedTimeText.text = String.format("%.2f", elapsedTime)
+
                 val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 val activeNetwork = connectivityManager.activeNetwork
                 val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
@@ -74,22 +91,37 @@ class MainActivity : ComponentActivity() {
                 val ssid = wifiInfo?.ssid ?: "Unknown"
                 val linkSpeed: Int = wifiInfo?.linkSpeed ?: -1
 
-                if(rssi != 10)
-                    Log.d("WifiInfo", "RSSI: $rssi")
-                else
-                    Log.d("WifiInfo", "No Wi-Fi connection")
+                //Logs for RSSI if needed
+//                if(rssi != 10)
+//                    Log.d("WifiInfo", "RSSI: $rssi")
+//                else
+//                    Log.d("WifiInfo", "No Wi-Fi connection")
 
                 if(rssi != 10)
-                    rssiText.text = "$rssi"
+                    rssiText.text = "$rssi dBm"
                 else
                     rssiText.text = "No Wi-Fi signal"
 
+                reachedFinishLine = rssi > -30
+
+                if(reachedFinishLine) {
+                    reachGoalText.text = "Yes"
+                    paused = true
+                } else {
+                    reachGoalText.text = "No"
+                    paused = false
+                }
+
             } else {
                 rssiText.text = "Not getting RSSI"
-        }
+            }
+
+            if(!paused) {
+                elapsedTime += 0.01
+            }
 
             //rssiText.text = "$rssi dBm"
-            handler.postDelayed(runnable, 1000)
+            handler.postDelayed(runnable, 10)
         }
         handler.post(runnable)
 
