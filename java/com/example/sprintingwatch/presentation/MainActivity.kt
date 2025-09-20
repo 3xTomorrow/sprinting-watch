@@ -70,6 +70,12 @@ class MainActivity : ComponentActivity() {
             gettingRSSI = false
             paused = true
         }
+        resetButton.setOnClickListener {
+            if(paused) {
+                elapsedTime = 0.0
+                runOnUiThread { elapsedTimeText.text = "$elapsedTime" }
+            }
+        }
 
 
 
@@ -100,6 +106,7 @@ class MainActivity : ComponentActivity() {
                 if(rssi != 10)
                     rssiText.text = "$rssi dBm"
                 else
+
                     rssiText.text = "No Wi-Fi signal"
 
                 reachedFinishLine = rssi > -30
