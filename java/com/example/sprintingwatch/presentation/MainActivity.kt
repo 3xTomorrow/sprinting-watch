@@ -16,15 +16,14 @@ import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresPermission
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlin.arrayOf
 
-enum class TimerStates {
-    INITIAL,
-    RUNNING,
-    PAUSED,
-    CANCELLED
-}
 
 class MainActivity : ComponentActivity() {
 
@@ -79,11 +78,14 @@ class MainActivity : ComponentActivity() {
 
 
 
+
         runnable = Runnable {
             if (gettingRSSI) {
 
+                //Changes the time dislayed and formats it
                 elapsedTimeText.text = String.format("%.2f", elapsedTime)
 
+                //Uses connectivity manager API to gather the WiFi information and use for the RSSI
                 val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 val activeNetwork = connectivityManager.activeNetwork
                 val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
@@ -92,10 +94,13 @@ class MainActivity : ComponentActivity() {
                     wifiInfo = networkCapabilities.transportInfo as? WifiInfo
                 }
 
+
+                // WiFi info data
                 val rssi: Int = wifiInfo?.rssi ?: 10  // in dBm (10 for null value rather than -1 because -1 is a possible value of RSSI while 10 is not)
                 val frequency: Int = wifiInfo?.frequency ?: -1
                 val ssid = wifiInfo?.ssid ?: "Unknown"
                 val linkSpeed: Int = wifiInfo?.linkSpeed ?: -1
+
 
                 //Logs for RSSI if needed
 //                if(rssi != 10)
@@ -103,14 +108,16 @@ class MainActivity : ComponentActivity() {
 //                else
 //                    Log.d("WifiInfo", "No Wi-Fi connection")
 
+                //Changes the display on the screen depending on if there is a connection
                 if(rssi != 10)
                     rssiText.text = "$rssi dBm"
                 else
-
                     rssiText.text = "No Wi-Fi signal"
 
-                reachedFinishLine = rssi > -30
+                //Variable for seeing if crossed finish line
+                reachedFinishLine = rssi > -20
 
+                //Conditional for crossing finish line
                 if(reachedFinishLine) {
                     reachGoalText.text = "Yes"
                     paused = true
@@ -120,11 +127,13 @@ class MainActivity : ComponentActivity() {
                 }
 
             } else {
+                //Displayed when user isn't getting the RSSI
                 rssiText.text = "Not getting RSSI"
             }
 
+            //Increases the time if the user is not paused
             if(!paused) {
-                elapsedTime += 0.01
+                elapsedTime += .01
             }
 
             //rssiText.text = "$rssi dBm"
@@ -133,33 +142,26 @@ class MainActivity : ComponentActivity() {
         handler.post(runnable)
 
 
+    }
 
-//        var states: TimerStates = TimerStates.INITIAL
-//        val timer = HandlerTimer()
-//
-//        startButton.setOnClickListener {
-//            if (states == TimerStates.INITIAL || states == TimerStates.CANCELLED) {
-//                timer.start(rssiText)
-//                states = TimerStates.RUNNING
-//            } else if (states == TimerStates.PAUSED) {
-//                timer.resume()
-//                states = TimerStates.RUNNING
-//            }
-//        }
-//
-//        pauseButton.setOnClickListener {
-//            if (states == TimerStates.RUNNING) {
-//                timer.pause()
-//                states = TimerStates.PAUSED
-//            }
-//        }
-//
-//        resetButton.setOnClickListener {
-//            if (states == TimerStates.RUNNING || states == TimerStates.PAUSED) {
-//                rssiText.text = "0"
-//                timer.reset()
-//                states = TimerStates.CANCELLED
-//            }
-//        }
+    fun rssiParse(cmdOutput: String): String {
+        val rssiStringIndex: Int = cmdOutput.indexOf("RSSI: ")
+        val cmdParsed: String = cmdOutput.substring(rssiStringIndex+6, rssiStringIndex+9)
+        return cmdParsed
+    }
+
+    //Stores the code for gathering RSSI with SuperUser commands
+    fun commandRSSI() {
+        //My own command which uses a super-user shell console
+        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd wifi status"))
+
+        val stdout = process.inputStream.bufferedReader().use { it.readText() }
+        //val stderr = process.errorStream.bufferedReader().use { it.readText() }
+        //val exitCode = process.waitFor()
+
+        val rssiString: String = rssiParse(stdout)
+        Log.d("RSSI", rssiString)
+
+        val rssi: Int = rssiString.toInt()
     }
 }
