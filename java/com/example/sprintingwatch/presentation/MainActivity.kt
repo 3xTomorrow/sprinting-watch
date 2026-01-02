@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            //
+            // Bluetooth
 
 
             runnable = Runnable {
