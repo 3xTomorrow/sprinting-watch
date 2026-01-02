@@ -82,12 +82,10 @@ class MainActivity : ComponentActivity() {
             }
 
 
-
-
             runnable = Runnable {
                 if (gettingRSSI) {
 
-                    //Changes the time dislayed and formats it
+                    //Changes the time displayed and formats it
                     elapsedTimeText.text = String.format("%.2f", elapsedTime)
 
                     //Uses connectivity manager API to gather the WiFi information and use for the RSSI
