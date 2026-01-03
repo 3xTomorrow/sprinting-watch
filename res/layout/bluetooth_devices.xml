@@ -6,7 +6,7 @@
     android:padding="16dp">
 
     <Button
-        android:id="@+id/btnScan"
+        android:id="@+id/scanBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Scan for Devices" />
