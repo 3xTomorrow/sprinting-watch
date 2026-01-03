@@ -150,9 +150,11 @@ class MainActivity : ComponentActivity() {
 
             //Button Functions
             startButton.setOnClickListener {
-                gettingRSSI = true
-                paused = false
-                startBleScan()
+                if(!gettingRSSI) {
+                    gettingRSSI = true
+                    paused = false
+                    startBleScan()
+                }
             }
 
             pauseButton.setOnClickListener {
@@ -164,11 +166,10 @@ class MainActivity : ComponentActivity() {
             resetButton.setOnClickListener {
                 if(paused) {
                     elapsedTime = 0.0
-                    finishLineBeaconRSSI = null
                     runOnUiThread {
-                        elapsedTimeText.text = "0.00"
+                        elapsedTimeText.text = "$elapsedTime"
                         rssiText.text = "Not scanning"
-                        reachGoalText.text = "Press Start"
+                        reachGoalText.text = "Sprint Timer"
                     }
                 }
             }
@@ -182,6 +183,7 @@ class MainActivity : ComponentActivity() {
                         stopBleScan()
                         gettingRSSI = false
                         paused = true
+                        reachedFinishLine = false
                     }
                 }
 
@@ -291,6 +293,8 @@ class MainActivity : ComponentActivity() {
 }
 
 
+
+// ---------- EXTRA (unneeded) CODE --------------
     fun rssiParse(cmdOutput: String): String {
         val rssiStringIndex: Int = cmdOutput.indexOf("RSSI: ")
         val cmdParsed: String = cmdOutput.substring(rssiStringIndex+6, rssiStringIndex+9)
