@@ -30,11 +30,11 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
 
+    ///BLE Variables
     private val PERMISSION_REQUEST_CODE = 1
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bleScanner: BluetoothLeScanner? = null
     private var isScanning = false
-
     private val deviceList = ArrayList<BluetoothDevice>()
     private var finishLineBeaconRSSI: Int? = null
 
@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var elapsedTimeText: TextView
 
     var reachedFinishLine: Boolean = false
+
 
     // BLE Scan Callback
     private val leScanCallback = object : ScanCallback() {
@@ -71,7 +72,7 @@ class MainActivity : ComponentActivity() {
                     rssiText.text = "$finishLineBeaconRSSI dBm"
 
                     finishLineBeaconRSSI?.let {
-                        if(it > -50) {
+                        if(it > -66) { //RSSI to reach finish line
                             reachGoalText.text = "You crossed the finish line!"
                             reachedFinishLine = true
                         }
