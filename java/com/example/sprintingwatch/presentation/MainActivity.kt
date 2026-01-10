@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     rssiText.text = "$finishLineBeaconRSSI dBm"
 
                     finishLineBeaconRSSI?.let {
-                        if(it > -50) {
+                        if(it > -66) {
                             reachGoalText.text = "You crossed the finish line!"
                             reachedFinishLine = true
                         }
