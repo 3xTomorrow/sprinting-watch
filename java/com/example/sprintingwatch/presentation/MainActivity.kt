@@ -24,9 +24,12 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.SystemClock
+import android.text.format.DateUtils.formatElapsedTime
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.sprintingwatch.presentation.Stopwatch.*
 
 class MainActivity : ComponentActivity() {
 
@@ -51,6 +54,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var elapsedTimeText: TextView
 
     var reachedFinishLine: Boolean = false
+
+    var stopwatch = Stopwatch()
 
     // BLE Scan Callback
     private val leScanCallback = object : ScanCallback() {
@@ -123,6 +128,12 @@ class MainActivity : ComponentActivity() {
         beginButton = findViewById(R.id.begin_button)
 
         beginButton.setOnClickListener {
+
+            if (!hasBluetoothPermissions()) {
+                requestBluetoothPermissions()
+            }
+
+
             setContentView(R.layout.main_layout)
 
             startButton = findViewById(R.id.start_button)
@@ -150,6 +161,12 @@ class MainActivity : ComponentActivity() {
 
             //Button Functions
             startButton.setOnClickListener {
+                stopwatch.start { millis ->
+                    val seconds = millis / 1000
+                    val milliseconds = millis % 1000
+                    elapsedTimeText.text = String.format("%02d.%03d", seconds, milliseconds)
+//                    elapsedTimeText.text = "${millis/1000}"
+                }
                 if(!gettingRSSI) {
                     gettingRSSI = true
                     paused = false
@@ -158,6 +175,7 @@ class MainActivity : ComponentActivity() {
             }
 
             pauseButton.setOnClickListener {
+                stopwatch.pause()
                 gettingRSSI = false
                 paused = true
                 stopBleScan()
@@ -165,9 +183,11 @@ class MainActivity : ComponentActivity() {
 
             resetButton.setOnClickListener {
                 if(paused) {
+                    stopwatch.reset()
+                    elapsedTimeText.text = "0"
                     elapsedTime = 0.0
                     runOnUiThread {
-                        elapsedTimeText.text = "$elapsedTime"
+                        //elapsedTimeText.text = "$elapsedTime"
                         rssiText.text = "Not scanning"
                         reachGoalText.text = "Sprint Timer"
                     }
@@ -176,8 +196,6 @@ class MainActivity : ComponentActivity() {
 
             runnable = Runnable {
                 if (gettingRSSI) {
-                    //Changes the time displayed and formats it
-                    elapsedTimeText.text = String.format("%.2f", elapsedTime)
 
                     if(reachedFinishLine) {
                         stopBleScan()
@@ -188,9 +206,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 //Increases the time if the user is not paused
-                if(!paused) {
-                    elapsedTime += 0.01
-                }
+//                if(!paused) {
+//                    elapsedTime += 0.01
+//                }
 
                 handler.postDelayed(runnable, 10)
             }
@@ -200,11 +218,6 @@ class MainActivity : ComponentActivity() {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     private fun startBleScan() {
-        if (!hasBluetoothPermissions()) {
-            requestBluetoothPermissions()
-            return
-        }
-
         if (bluetoothAdapter?.isEnabled != true) {
             Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_SHORT).show()
             return
