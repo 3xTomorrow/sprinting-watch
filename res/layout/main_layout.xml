@@ -12,20 +12,39 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="24dp"
         android:text="Sprint Timer"
-        android:textSize="20sp"
-        android:textStyle="bold" />
+        android:textAlignment="center"
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:translationY="-20dp" />
 
     <!-- RSSI Display -->
+
+    <!-- Reached Finish Line Display -->
+
+    <!-- Elapsed Time Display -->
+
+    <!-- Control Buttons -->
+    <TextView
+        android:id="@+id/elapsedTimeText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Time here"
+        android:textAlignment="center"
+        android:textSize="16sp"
+        android:translationX="0dp"
+        android:translationY="40dp" />
+
     <LinearLayout
         android:id="@+id/rssiContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/reachGoalText"
-        android:layout_marginTop="40dp"
-        android:orientation="vertical"
+        android:layout_marginTop="200dp"
+        android:background="@android:drawable/dialog_holo_light_frame"
         android:gravity="center"
-        android:padding="16dp"
-        android:background="@android:drawable/dialog_holo_light_frame">
+        android:orientation="vertical"
+        android:padding="16dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -47,56 +66,47 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Reached Finish Line Display -->
-
-    <!-- Elapsed Time Display -->
-
-    <!-- Control Buttons -->
     <LinearLayout
         android:id="@+id/buttonContainer"
         android:layout_width="176dp"
-        android:layout_height="80dp"
+        android:layout_height="142dp"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="42dp"
+        android:layout_marginBottom="0dp"
         android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:translationY="15sp">
 
         <Button
             android:id="@+id/start_button"
-            android:layout_width="40dp"
-            android:layout_height="29dp"
+            android:layout_width="49dp"
+            android:layout_height="76dp"
             android:layout_margin="4dp"
             android:layout_weight="1"
             android:backgroundTint="#4CAF50"
-            android:text="Start"
+            android:rotation="0"
+            android:text="S\nT\nA\nR\nT"
+            android:textAllCaps="false"
             android:textSize="8sp" />
 
         <Button
             android:id="@+id/pause_button"
-            android:layout_width="34dp"
-            android:layout_height="29dp"
+            android:layout_width="48dp"
+            android:layout_height="77dp"
             android:layout_margin="4dp"
             android:layout_weight="1"
             android:backgroundTint="#FF9800"
-            android:text="Pause"
+            android:text="P\nA\nU\nS\nE"
             android:textSize="8sp" />
 
         <Button
             android:id="@+id/reset_button"
-            android:layout_width="44dp"
-            android:layout_height="30dp"
+            android:layout_width="46dp"
+            android:layout_height="76dp"
             android:layout_margin="4dp"
             android:layout_weight="1"
             android:backgroundTint="#F44336"
-            android:text="Reset"
+            android:text="R\nE\nS\nE\nT"
             android:textSize="8sp" />
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/elapsedTimeText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Time here"
-        android:textAlignment="center" />
 
 </RelativeLayout>

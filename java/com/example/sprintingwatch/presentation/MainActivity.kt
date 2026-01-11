@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
 
                     finishLineBeaconRSSI?.let {
                         if(it > -66) { //RSSI to reach finish line
-                            reachGoalText.text = "You crossed the finish line!"
+                            reachGoalText.text = "Finish!"
                             reachedFinishLine = true
                         }
                     }
@@ -152,12 +152,12 @@ class MainActivity : ComponentActivity() {
 
             //Button Functions
             startButton.setOnClickListener {
-                stopwatch.start { millis ->
-                    val seconds = millis / 1000
-                    val milliseconds = millis % 1000
-                    elapsedTimeText.text = String.format("%02d.%03d", seconds, milliseconds)
-                }
                 if(!gettingRSSI) {
+                    stopwatch.start { millis ->
+                        val seconds = millis / 1000
+                        val milliseconds = millis % 1000
+                        elapsedTimeText.text = String.format("%02d.%03d", seconds, milliseconds)
+                    }
                     gettingRSSI = true
                     paused = false
                     startBleScan()
@@ -185,8 +185,6 @@ class MainActivity : ComponentActivity() {
 
             runnable = Runnable {
                 if (gettingRSSI) {
-                    //Changes the time displayed and formats it
-                    elapsedTimeText.text = String.format("%.2f", elapsedTime)
 
                     if(reachedFinishLine) {
                         stopwatch.pause()
@@ -224,8 +222,8 @@ class MainActivity : ComponentActivity() {
         finishLineBeaconRSSI = null
 
         isScanning = true
-        startButton.text = "Scanning..."
-        rssiText.text = "Searching..."
+        //startButton.text = "S\nC\nA\nN\nN\nI\nN\nG\n.\n.\n."
+        //rssiText.text = "Searching..."
 
         // Scan settings for continuous scanning
         val scanSettings = ScanSettings.Builder()
@@ -249,7 +247,7 @@ class MainActivity : ComponentActivity() {
         if (!isScanning) return
 
         isScanning = false
-        startButton.text = "Start"
+        startButton.text = "S\nT\nA\nR\nT"
         bleScanner?.stopScan(leScanCallback)
     }
 
