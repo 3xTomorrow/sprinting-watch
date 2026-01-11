@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/reachGoalText"
+        android:layout_width="129dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="83dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="84dp"
+        android:fontFamily="sans-serif"
+        android:gravity="center|top"
+        android:text="Timer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.49"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/start_button"
+        android:layout_width="51dp"
+        android:layout_height="38dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:text="Start"
+        android:textSize="8sp"
+        app:layout_constraintBottom_toTopOf="@+id/rssiText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/reachGoalText"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <Button
+        android:id="@+id/reset_button"
+        android:layout_width="51dp"
+        android:layout_height="38dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:text="Reset"
+        android:textSize="8sp"
+        app:layout_constraintBottom_toTopOf="@+id/rssiText"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/reachGoalText"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <Button
+        android:id="@+id/pause_button"
+        android:layout_width="51dp"
+        android:layout_height="38dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:text="Pause"
+        android:textSize="8sp"
+        app:layout_constraintBottom_toTopOf="@+id/rssiText"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/reachGoalText"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <TextView
+        android:id="@+id/rssiText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="33dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"
+        android:text="RSSI Here"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/elapsedTimeText"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/elapsedTimeText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="33dp"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"
+        android:text="Time Here"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/rssiText" />
+
+    <TextView
+        android:id="@+id/finishLineText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="65dp"
+        android:gravity="center"
+        android:text="Reached Finish Line: "
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/reachGoalText" />
+
+    <TextView
+        android:id="@+id/reachedGoalText"
+        android:layout_width="22dp"
+        android:layout_height="17dp"
+        android:layout_marginStart="65dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:text="No"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.852"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/reachGoalText" />
+</androidx.constraintlayout.widget.ConstraintLayout>
