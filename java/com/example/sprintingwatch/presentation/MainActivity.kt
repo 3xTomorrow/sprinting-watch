@@ -27,6 +27,10 @@ import android.os.Build
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
 
 class MainActivity : ComponentActivity() {
 
