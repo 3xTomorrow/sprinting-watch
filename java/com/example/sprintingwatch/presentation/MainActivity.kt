@@ -27,6 +27,10 @@ import android.os.Build
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+
+import kotlin.math.*
+
+//IMPORTS SENSOR API
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.SensorEvent
@@ -54,9 +58,23 @@ class MainActivity : ComponentActivity() {
     private lateinit var rssiText: TextView
     private lateinit var elapsedTimeText: TextView
 
-    var reachedFinishLine: Boolean = false
+    //TIMER AND RSSI VARIABLES
+    var gettingRSSI: Boolean = false
+    var paused: Boolean = true
+    var elapsedTime: Double = 0.0
 
+    //OTHER
+    var reachedFinishLine: Boolean = false
     var stopwatch: Stopwatch = Stopwatch()
+
+    //SENSOR VARIABLES
+    private lateinit var sensorManager: SensorManager
+    private var accelerometer: Sensor? = null
+    private var startedRace: Boolean = false
+    private var sensorThreshold: Float = 3.0f
+
+
+    //EVENT FUNCTIONS
 
     // BLE Scan Callback
     private val leScanCallback = object : ScanCallback() {
@@ -111,6 +129,39 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    //Sensor Event
+    private val accelerometerListener = object : SensorEventListener {
+        @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+        override fun onSensorChanged(event: SensorEvent) {
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+
+            val magnitude = sqrt(x*x + y*y + z*z)
+            val motion = abs(magnitude - SensorManager.GRAVITY_EARTH)
+
+            if(motion > sensorThreshold) {
+                if(!gettingRSSI) {
+                    Log.d("LOG", "RACE STARTED!!!!")
+                    stopwatch.start { millis ->
+                        val seconds = millis / 1000
+                        val milliseconds = millis % 1000
+                        elapsedTimeText.text = String.format("%02d.%03d", seconds, milliseconds)
+                    }
+                    gettingRSSI = true
+                    paused = false
+                    startBleScan()
+                }
+
+                //Stops listening once detected
+                sensorManager.unregisterListener(this)
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) { }
+    }
+
+
     @SuppressLint("SetTextI18n", "MissingInflatedId")
     @RequiresPermission(allOf = [
         Manifest.permission.ACCESS_NETWORK_STATE,
@@ -144,28 +195,19 @@ class MainActivity : ComponentActivity() {
             val handler = Handler(Looper.getMainLooper())
             lateinit var runnable: Runnable
 
-            //Other Variables
-            var gettingRSSI: Boolean = false
-            var paused: Boolean = true
-            var elapsedTime: Double = 0.0
-
             // Initialize Bluetooth
             val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             bluetoothAdapter = bluetoothManager.adapter
             bleScanner = bluetoothAdapter?.bluetoothLeScanner
 
-            //Button Functions
-            startButton.setOnClickListener {
-                if(!gettingRSSI) {
-                    stopwatch.start { millis ->
-                        val seconds = millis / 1000
-                        val milliseconds = millis % 1000
-                        elapsedTimeText.text = String.format("%02d.%03d", seconds, milliseconds)
-                    }
-                    gettingRSSI = true
-                    paused = false
-                    startBleScan()
-                }
+            //Initialize Accelerometer
+            setupSensors()
+            accelerometer?.let {
+                sensorManager.registerListener(
+                    accelerometerListener,
+                    it,
+                    SensorManager.SENSOR_DELAY_NORMAL
+                )
             }
 
             pauseButton.setOnClickListener {
@@ -178,6 +220,13 @@ class MainActivity : ComponentActivity() {
             resetButton.setOnClickListener {
                 if(paused) {
                     stopwatch.reset()
+                    accelerometer?.let {
+                        sensorManager.registerListener(
+                            accelerometerListener,
+                            it,
+                            SensorManager.SENSOR_DELAY_NORMAL
+                        )
+                    }
                     elapsedTime = 0.00
                     runOnUiThread {
                         elapsedTimeText.text = "$elapsedTime"
@@ -208,6 +257,17 @@ class MainActivity : ComponentActivity() {
             }
             handler.post(runnable)
         }
+    }
+
+    private fun setupSensors() {
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        if(sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        } else {
+            Toast.makeText(this, "Your device doesn't support the accelerometer", Toast.LENGTH_SHORT).show()
+            Log.e("SENSOR ERROR", "Accelerometer not detected")
+        }
+
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
@@ -301,6 +361,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopBleScan()
+        sensorManager.unregisterListener(accelerometerListener)
     }
 }
 
