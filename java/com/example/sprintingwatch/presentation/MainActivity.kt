@@ -36,6 +36,11 @@ import android.hardware.SensorManager
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 
+//IMPORTS VIBRATOR API
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.os.VibratorManager
+
 class MainActivity : ComponentActivity() {
 
     ///BLE Variables
@@ -73,6 +78,12 @@ class MainActivity : ComponentActivity() {
     private var startedRace: Boolean = false
     private var sensorThreshold: Float = 3.0f
 
+    //VIBRATOR VARIABLES
+    private lateinit var vibratorManager: VibratorManager
+    private var vibrator: Vibrator? = null
+    private var buttonVibration: VibrationEffect? = null
+    private var finishVibration: VibrationEffect? = null
+
 
     //EVENT FUNCTIONS
 
@@ -96,6 +107,7 @@ class MainActivity : ComponentActivity() {
 
                     finishLineBeaconRSSI?.let {
                         if(it > -66) { //RSSI to reach finish line
+                            vibrator?.vibrate(finishVibration)
                             reachGoalText.text = "Finish!"
                             reachedFinishLine = true
                         }
@@ -162,12 +174,14 @@ class MainActivity : ComponentActivity() {
     }
 
 
+    //RUNNING APP FUNCTION
     @SuppressLint("SetTextI18n", "MissingInflatedId")
     @RequiresPermission(allOf = [
         Manifest.permission.ACCESS_NETWORK_STATE,
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.BLUETOOTH_SCAN,
-        Manifest.permission.BLUETOOTH_CONNECT
+        Manifest.permission.BLUETOOTH_CONNECT,
+        Manifest.permission.VIBRATE
     ])
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -176,11 +190,14 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.title_screen)
 
+        setupVibrator()
+
         //Creates variables for the button
         beginButton = findViewById(R.id.begin_button)
 
         beginButton.setOnClickListener {
             setContentView(R.layout.main_layout)
+            vibrator?.vibrate(buttonVibration)
 
             startButton = findViewById(R.id.start_button)
             resetButton = findViewById(R.id.reset_button)
@@ -211,6 +228,7 @@ class MainActivity : ComponentActivity() {
             }
 
             pauseButton.setOnClickListener {
+                vibrator?.vibrate(buttonVibration)
                 stopwatch.pause()
                 gettingRSSI = false
                 paused = true
@@ -219,6 +237,7 @@ class MainActivity : ComponentActivity() {
 
             resetButton.setOnClickListener {
                 if(paused) {
+                    vibrator?.vibrate(buttonVibration)
                     stopwatch.reset()
                     accelerometer?.let {
                         sensorManager.registerListener(
@@ -259,6 +278,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    //Function that sets up the sensors for the device
     private fun setupSensors() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         if(sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
@@ -268,6 +288,14 @@ class MainActivity : ComponentActivity() {
             Log.e("SENSOR ERROR", "Accelerometer not detected")
         }
 
+    }
+
+    //Function that sets up the vibrators for the device
+    private fun setupVibrator() {
+        vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        vibrator = vibratorManager.defaultVibrator
+        buttonVibration = VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+        finishVibration = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
