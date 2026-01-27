@@ -40,6 +40,7 @@ import android.hardware.SensorEventListener
 import android.os.Vibrator
 import android.os.VibrationEffect
 import android.os.VibratorManager
+import android.widget.EditText
 
 class MainActivity : ComponentActivity() {
 
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private var isScanning = false
     private val deviceList = ArrayList<BluetoothDevice>()
     private var finishLineBeaconRSSI: Int? = null
+    private var rssiThreshold: Int = -75
 
     //Buttons
     private lateinit var beginButton: Button
@@ -61,6 +63,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var reachGoalText: TextView
     private lateinit var rssiText: TextView
     private lateinit var elapsedTimeText: TextView
+
+    //INPUT
+    private lateinit var rssiInput: EditText
 
     //TIMER AND RSSI VARIABLES
     var gettingRSSI: Boolean = false
@@ -105,7 +110,7 @@ class MainActivity : ComponentActivity() {
                     rssiText.text = "$finishLineBeaconRSSI dBm"
 
                     finishLineBeaconRSSI?.let {
-                        if(it > -75) { //RSSI to reach finish line
+                        if(it > rssiThreshold) { //RSSI to reach finish line
                             vibrator?.vibrate(finishVibration)
                             reachGoalText.text = "Finish!"
                             reachedFinishLine = true
@@ -213,6 +218,9 @@ class MainActivity : ComponentActivity() {
             rssiText = findViewById(R.id.rssiText)
             elapsedTimeText = findViewById(R.id.elapsedTimeText)
 
+            //Creates variable for text input
+            rssiInput = findViewById<EditText>(R.id.editTextNumber)
+
             //Event Loop Variables
             val handler = Handler(Looper.getMainLooper())
             lateinit var runnable: Runnable
@@ -262,7 +270,7 @@ class MainActivity : ComponentActivity() {
 
             runnable = Runnable {
                 if (gettingRSSI) {
-
+                    rssiThreshold = rssiInput.text.toString().toInt()
                     if(reachedFinishLine) {
                         stopwatch.pause()
                         stopBleScan()

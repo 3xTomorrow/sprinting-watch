@@ -36,6 +36,17 @@
         android:translationX="0dp"
         android:translationY="40dp" />
 
+    <EditText
+        android:id="@+id/editTextNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ems="10"
+        android:hint="RSSI Here"
+        android:inputType="text|textPhonetic"
+        android:scaleY="1"
+        android:translationY="100dp" />
+
     <LinearLayout
         android:id="@+id/rssiContainer"
         android:layout_width="match_parent"
@@ -72,7 +83,7 @@
         android:layout_width="176dp"
         android:layout_height="142dp"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="0dp"
+        android:layout_marginBottom="17dp"
         android:gravity="center"
         android:orientation="horizontal"
         android:translationY="15sp">
@@ -80,7 +91,7 @@
         <Button
             android:id="@+id/pause_button"
             android:layout_width="48dp"
-            android:layout_height="49dp"
+            android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:layout_weight="1"
             android:backgroundTint="#FF9800"
@@ -90,7 +101,7 @@
         <Button
             android:id="@+id/reset_button"
             android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:layout_weight="1"
             android:backgroundTint="#F44336"
