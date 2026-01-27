@@ -53,7 +53,6 @@ class MainActivity : ComponentActivity() {
 
     //Buttons
     private lateinit var beginButton: Button
-    private lateinit var startButton: Button
     private lateinit var resetButton: Button
     private lateinit var pauseButton: Button
     private lateinit var scanButton: Button
@@ -106,7 +105,7 @@ class MainActivity : ComponentActivity() {
                     rssiText.text = "$finishLineBeaconRSSI dBm"
 
                     finishLineBeaconRSSI?.let {
-                        if(it > -66) { //RSSI to reach finish line
+                        if(it > -75) { //RSSI to reach finish line
                             vibrator?.vibrate(finishVibration)
                             reachGoalText.text = "Finish!"
                             reachedFinishLine = true
@@ -136,7 +135,6 @@ class MainActivity : ComponentActivity() {
                 reachGoalText.text = "Scan failed with error: $errorCode"
                 rssiText.text = "Scan Failed"
                 isScanning = false
-                startButton.isEnabled = true
             }
         }
     }
@@ -196,10 +194,17 @@ class MainActivity : ComponentActivity() {
         beginButton = findViewById(R.id.begin_button)
 
         beginButton.setOnClickListener {
+            if (!hasBluetoothPermissions()) {
+                requestBluetoothPermissions()
+            }
+
+            if (bluetoothAdapter?.isEnabled != true) {
+                Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_SHORT).show()
+            }
+
             setContentView(R.layout.main_layout)
             vibrator?.vibrate(buttonVibration)
 
-            startButton = findViewById(R.id.start_button)
             resetButton = findViewById(R.id.reset_button)
             pauseButton = findViewById(R.id.pause_button)
 
@@ -300,21 +305,11 @@ class MainActivity : ComponentActivity() {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     private fun startBleScan() {
-        if (!hasBluetoothPermissions()) {
-            requestBluetoothPermissions()
-            return
-        }
-
-        if (bluetoothAdapter?.isEnabled != true) {
-            Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_SHORT).show()
-            return
-        }
 
         // Clear previous RSSI value
         finishLineBeaconRSSI = null
 
         isScanning = true
-        //startButton.text = "S\nC\nA\nN\nN\nI\nN\nG\n.\n.\n."
         //rssiText.text = "Searching..."
 
         // Scan settings for continuous scanning
@@ -339,7 +334,6 @@ class MainActivity : ComponentActivity() {
         if (!isScanning) return
 
         isScanning = false
-        startButton.text = "S\nT\nA\nR\nT"
         bleScanner?.stopScan(leScanCallback)
     }
 
