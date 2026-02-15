@@ -3,9 +3,6 @@ package com.example.sprintingwatch.presentation
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -16,20 +13,179 @@ import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresPermission
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.IOException
-import java.util.concurrent.TimeUnit
-import kotlin.arrayOf
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
+import kotlin.math.*
+
+//IMPORTS SENSOR API
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+
+//IMPORTS VIBRATOR API
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.os.VibratorManager
+import android.widget.EditText
 
 class MainActivity : ComponentActivity() {
 
+    ///BLE Variables
+    private val PERMISSION_REQUEST_CODE = 1
+    private var bluetoothAdapter: BluetoothAdapter? = null
+    private var bleScanner: BluetoothLeScanner? = null
+    private var isScanning = false
+    private val deviceList = ArrayList<BluetoothDevice>()
+    private var finishLineBeaconRSSI: Int? = null
+    private var rssiThreshold: Int = -75
 
-    @SuppressLint("SetTextI18n", "MissingInflatedId", "ServiceCast")
-    @RequiresPermission(allOf= [Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.ACCESS_FINE_LOCATION])
+    //Buttons
+    private lateinit var beginButton: Button
+    private lateinit var resetButton: Button
+    private lateinit var pauseButton: Button
+    private lateinit var scanButton: Button
+
+    //Text
+    private lateinit var reachGoalText: TextView
+    private lateinit var rssiText: TextView
+    private lateinit var elapsedTimeText: TextView
+
+    //INPUT
+    private lateinit var rssiInput: EditText
+
+    //TIMER AND RSSI VARIABLES
+    var gettingRSSI: Boolean = false
+    var paused: Boolean = true
+    var elapsedTime: Double = 0.0
+
+    //OTHER
+    var reachedFinishLine: Boolean = false
+    var stopwatch: Stopwatch = Stopwatch()
+
+    //SENSOR VARIABLES
+    private lateinit var sensorManager: SensorManager
+    private var accelerometer: Sensor? = null
+    private var startedRace: Boolean = false
+    private var sensorThreshold: Float = 3.0f
+
+    //VIBRATOR VARIABLES
+    private lateinit var vibratorManager: VibratorManager
+    private var vibrator: Vibrator? = null
+    private var buttonVibration: VibrationEffect? = null
+    private var finishVibration: VibrationEffect? = null
+
+
+    //EVENT FUNCTIONS
+
+    // BLE Scan Callback
+    private val leScanCallback = object : ScanCallback() {
+        @SuppressLint("SetTextI18n")
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            super.onScanResult(callbackType, result)
+            val device = result.device
+            val deviceName = device.name ?: "Unknown"
+
+            // Check if this is the Finish Line Beacon
+            if (deviceName == "Finish Line Beacon") {
+                finishLineBeaconRSSI = result.rssi
+                Log.d("BLE_RSSI", "Finish Line Beacon RSSI: $finishLineBeaconRSSI")
+
+                // Update UI on main thread
+                runOnUiThread {
+                    rssiText.text = "$finishLineBeaconRSSI dBm"
+
+                    finishLineBeaconRSSI?.let {
+                        if(it > rssiThreshold) { //RSSI to reach finish line
+                            vibrator?.vibrate(finishVibration)
+                            reachGoalText.text = "Finish!"
+                            reachedFinishLine = true
+                        }
+                    }
+
+                }
+            }
+
+            // Avoid duplicates in device list
+            if (!deviceList.contains(device)) {
+                deviceList.add(device)
+            }
+        }
+
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+        override fun onBatchScanResults(results: MutableList<ScanResult>) {
+            super.onBatchScanResults(results)
+            for (result in results) {
+                onScanResult(SCAN_FAILED_ALREADY_STARTED, result)
+            }
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            super.onScanFailed(errorCode)
+            runOnUiThread {
+                reachGoalText.text = "Scan failed with error: $errorCode"
+                rssiText.text = "Scan Failed"
+                isScanning = false
+            }
+        }
+    }
+
+    //Sensor Event
+    private val accelerometerListener = object : SensorEventListener {
+        @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+        override fun onSensorChanged(event: SensorEvent) {
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+
+            val magnitude = sqrt(x*x + y*y + z*z)
+            val motion = abs(magnitude - SensorManager.GRAVITY_EARTH)
+
+            if(motion > sensorThreshold) {
+                if(!gettingRSSI) {
+                    Log.d("LOG", "RACE STARTED!!!!")
+                    stopwatch.start { millis ->
+                        val seconds = millis / 1000
+                        val milliseconds = millis % 1000
+                        elapsedTimeText.text = String.format("%02d.%03d", seconds, milliseconds)
+                    }
+                    gettingRSSI = true
+                    paused = false
+                    startBleScan()
+                }
+
+                //Stops listening once detected
+                sensorManager.unregisterListener(this)
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) { }
+    }
+
+
+    //RUNNING APP FUNCTION
+    @SuppressLint("SetTextI18n", "MissingInflatedId")
+    @RequiresPermission(allOf = [
+        Manifest.permission.ACCESS_NETWORK_STATE,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.BLUETOOTH_SCAN,
+        Manifest.permission.BLUETOOTH_CONNECT,
+        Manifest.permission.VIBRATE
+    ])
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -37,118 +193,211 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.title_screen)
 
+        setupVibrator()
+
         //Creates variables for the button
-        val beginButton: Button = findViewById(R.id.begin_button)
+        beginButton = findViewById(R.id.begin_button)
 
         beginButton.setOnClickListener {
-            setContentView(R.layout.main_layout)
+            if (!hasBluetoothPermissions()) {
+                requestBluetoothPermissions()
+            }
 
-            val startButton: Button = findViewById(R.id.start_button)
-            val resetButton: Button = findViewById(R.id.reset_button)
-            val pauseButton: Button = findViewById(R.id.pause_button)
+            if (bluetoothAdapter?.isEnabled != true) {
+                Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_SHORT).show()
+            }
+
+            setContentView(R.layout.main_layout)
+            vibrator?.vibrate(buttonVibration)
+
+            resetButton = findViewById(R.id.reset_button)
+            pauseButton = findViewById(R.id.pause_button)
 
             //Creates variables for the texts
-            val reachGoalText: TextView = findViewById(R.id.reachedGoalText)
-            val rssiText: TextView = findViewById(R.id.rssiText)
-            val elapsedTimeText: TextView = findViewById(R.id.elapsedTimeText)
+            reachGoalText = findViewById(R.id.reachGoalText)
+            rssiText = findViewById(R.id.rssiText)
+            elapsedTimeText = findViewById(R.id.elapsedTimeText)
+
+            //Creates variable for text input
+            rssiInput = findViewById<EditText>(R.id.editTextNumber)
 
             //Event Loop Variables
             val handler = Handler(Looper.getMainLooper())
             lateinit var runnable: Runnable
 
-            //WiFi Variables
-            var wifiInfo: WifiInfo? = null
+            // Initialize Bluetooth
+            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            bluetoothAdapter = bluetoothManager.adapter
+            bleScanner = bluetoothAdapter?.bluetoothLeScanner
 
-            //Other Variables
-            var gettingRSSI: Boolean = false
-            var reachedFinishLine: Boolean = false
-            var paused: Boolean = true
-            var elapsedTime: Double = 0.0
-
-            //Button Functions that change whether the program should be gathering RSSI or not.
-            startButton.setOnClickListener {
-                gettingRSSI = true
-                paused = false
+            //Initialize Accelerometer
+            setupSensors()
+            accelerometer?.let {
+                sensorManager.registerListener(
+                    accelerometerListener,
+                    it,
+                    SensorManager.SENSOR_DELAY_NORMAL
+                )
             }
+
             pauseButton.setOnClickListener {
+                vibrator?.vibrate(buttonVibration)
+                stopwatch.pause()
                 gettingRSSI = false
                 paused = true
+                stopBleScan()
             }
+
             resetButton.setOnClickListener {
                 if(paused) {
-                    elapsedTime = 0.0
-                    runOnUiThread { elapsedTimeText.text = "$elapsedTime" }
+                    vibrator?.vibrate(buttonVibration)
+                    stopwatch.reset()
+                    accelerometer?.let {
+                        sensorManager.registerListener(
+                            accelerometerListener,
+                            it,
+                            SensorManager.SENSOR_DELAY_NORMAL
+                        )
+                    }
+                    elapsedTime = 0.00
+                    runOnUiThread {
+                        elapsedTimeText.text = "$elapsedTime"
+                        rssiText.text = "Not scanning"
+                        reachGoalText.text = "Sprint Timer"
+                    }
                 }
             }
 
-
             runnable = Runnable {
                 if (gettingRSSI) {
-
-                    //Changes the time displayed and formats it
-                    elapsedTimeText.text = String.format("%.2f", elapsedTime)
-
-                    //Uses connectivity manager API to gather the WiFi information and use for the RSSI
-                    val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                    val activeNetwork = connectivityManager.activeNetwork
-                    val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-
-                    if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                        wifiInfo = networkCapabilities.transportInfo as? WifiInfo
-                    }
-
-
-                    // WiFi info data
-                    val rssi: Int = wifiInfo?.rssi ?: 10  // in dBm (10 for null value rather than -1 because -1 is a possible value of RSSI while 10 is not)
-                    val frequency: Int = wifiInfo?.frequency ?: -1
-                    val ssid = wifiInfo?.ssid ?: "Unknown"
-                    val linkSpeed: Int = wifiInfo?.linkSpeed ?: -1
-
-
-                    //Logs for RSSI if needed
-//                if(rssi != 10)
-//                    Log.d("WifiInfo", "RSSI: $rssi")
-//                else
-//                    Log.d("WifiInfo", "No Wi-Fi connection")
-
-                    //Changes the display on the screen depending on if there is a connection
-                    if(rssi != 10)
-                        rssiText.text = "$rssi dBm"
-                    else
-                        rssiText.text = "No Wi-Fi signal"
-
-                    //Variable for seeing if crossed finish line
-                    reachedFinishLine = rssi > -20
-
-                    //Conditional for crossing finish line
+                    rssiThreshold = rssiInput.text.toString().toInt()
                     if(reachedFinishLine) {
-                        reachGoalText.text = "Yes"
+                        stopwatch.pause()
+                        stopBleScan()
+                        gettingRSSI = false
                         paused = true
-                    } else {
-                        reachGoalText.text = "No"
-                        paused = false
+                        reachedFinishLine = false
                     }
-
-                } else {
-                    //Displayed when user isn't getting the RSSI
-                    rssiText.text = "Not getting RSSI"
                 }
 
                 //Increases the time if the user is not paused
                 if(!paused) {
-                    elapsedTime += .01
+                    elapsedTime += 0.01
                 }
 
-                //rssiText.text = "$rssi dBm"
                 handler.postDelayed(runnable, 10)
             }
             handler.post(runnable)
         }
+    }
 
-
+    //Function that sets up the sensors for the device
+    private fun setupSensors() {
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        if(sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        } else {
+            Toast.makeText(this, "Your device doesn't support the accelerometer", Toast.LENGTH_SHORT).show()
+            Log.e("SENSOR ERROR", "Accelerometer not detected")
+        }
 
     }
 
+    //Function that sets up the vibrators for the device
+    private fun setupVibrator() {
+        vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        vibrator = vibratorManager.defaultVibrator
+        buttonVibration = VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+        finishVibration = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    private fun startBleScan() {
+
+        // Clear previous RSSI value
+        finishLineBeaconRSSI = null
+
+        isScanning = true
+        //rssiText.text = "Searching..."
+
+        // Scan settings for continuous scanning
+        val scanSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            .setReportDelay(0L) // Report immediately
+            .build()
+
+        // Filter for Finish Line Beacon
+        val scanFilters = ScanFilter.Builder()
+            .setDeviceName("Finish Line Beacon")
+            .build()
+
+        val filters = listOf(scanFilters)
+
+        bleScanner?.startScan(filters, scanSettings, leScanCallback)
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    private fun stopBleScan() {
+        if (!isScanning) return
+
+        isScanning = false
+        bleScanner?.stopScan(leScanCallback)
+    }
+
+    private fun requestBluetoothPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val permissions = arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
+        } else {
+            val permissions = arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
+        }
+    }
+
+    private fun hasBluetoothPermissions(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                startBleScan()
+            } else {
+                Toast.makeText(this, "Bluetooth permissions required", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    override fun onDestroy() {
+        super.onDestroy()
+        stopBleScan()
+        sensorManager.unregisterListener(accelerometerListener)
+    }
+}
+
+
+
+// ---------- EXTRA (unneeded) CODE --------------
     fun rssiParse(cmdOutput: String): String {
         val rssiStringIndex: Int = cmdOutput.indexOf("RSSI: ")
         val cmdParsed: String = cmdOutput.substring(rssiStringIndex+6, rssiStringIndex+9)
@@ -169,4 +418,4 @@ class MainActivity : ComponentActivity() {
 
         val rssi: Int = rssiString.toInt()
     }
-}
+
