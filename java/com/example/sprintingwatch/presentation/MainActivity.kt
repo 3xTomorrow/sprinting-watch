@@ -40,7 +40,21 @@ import android.hardware.SensorEventListener
 import android.os.Vibrator
 import android.os.VibrationEffect
 import android.os.VibratorManager
+import android.provider.ContactsContract
 import android.widget.EditText
+
+//IMPORTS HEALTH API
+import androidx.health.services.client.HealthServices
+import androidx.health.services.client.data.DataType
+import androidx.health.services.client.MeasureCallback
+import androidx.health.services.client.MeasureClient
+import androidx.health.services.client.data.Availability
+import androidx.health.services.client.data.DataPointContainer
+import androidx.health.services.client.data.DeltaDataType
+import androidx.health.services.client.data.MeasureCapabilities
+import androidx.health.services.client.unregisterMeasureCallback
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -88,6 +102,10 @@ class MainActivity : ComponentActivity() {
     private var buttonVibration: VibrationEffect? = null
     private var finishVibration: VibrationEffect? = null
 
+    //HEALTH VARIABLES
+    private lateinit var measureClient: MeasureClient
+    private var heartRateCallback: MeasureCallback? = null
+    private var isMeasuring = false
 
     //EVENT FUNCTIONS
 
@@ -165,7 +183,15 @@ class MainActivity : ComponentActivity() {
                     }
                     gettingRSSI = true
                     paused = false
-                    startBleScan()
+                    if (hasBluetoothPermissions()) {
+                        startBleScan()
+                        startHeartRateMonitoring()
+                    } else {
+                        Log.e("Permission", "Bluetooth permissions not granted")
+                        gettingRSSI = false
+                        paused = true
+                        stopwatch.pause()
+                    }
                 }
 
                 //Stops listening once detected
@@ -195,17 +221,13 @@ class MainActivity : ComponentActivity() {
 
         setupVibrator()
 
+        //Allows me to measure health data
+        measureClient = HealthServices.getClient(this).measureClient
+
         //Creates variables for the button
         beginButton = findViewById(R.id.begin_button)
 
         beginButton.setOnClickListener {
-            if (!hasBluetoothPermissions()) {
-                requestBluetoothPermissions()
-            }
-
-            if (bluetoothAdapter?.isEnabled != true) {
-                Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_SHORT).show()
-            }
 
             setContentView(R.layout.main_layout)
             vibrator?.vibrate(buttonVibration)
@@ -246,6 +268,7 @@ class MainActivity : ComponentActivity() {
                 gettingRSSI = false
                 paused = true
                 stopBleScan()
+                stopHeartRateMonitoring()
             }
 
             resetButton.setOnClickListener {
@@ -270,7 +293,10 @@ class MainActivity : ComponentActivity() {
 
             runnable = Runnable {
                 if (gettingRSSI) {
-                    rssiThreshold = rssiInput.text.toString().toInt()
+                    val rssiInputText = rssiInput.text.toString()
+                    if(rssiInputText.isNotEmpty()) {
+                        rssiThreshold = rssiInputText.toInt()
+                    }
                     if(reachedFinishLine) {
                         stopwatch.pause()
                         stopBleScan()
@@ -314,11 +340,18 @@ class MainActivity : ComponentActivity() {
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     private fun startBleScan() {
 
+        if (!hasBluetoothPermissions()) {
+            requestBluetoothPermissions()
+            return
+        }
+
+        if (bluetoothAdapter?.isEnabled != true) {
+            Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_SHORT).show()
+        }
+
         // Clear previous RSSI value
         finishLineBeaconRSSI = null
-
         isScanning = true
-        //rssiText.text = "Searching..."
 
         // Scan settings for continuous scanning
         val scanSettings = ScanSettings.Builder()
@@ -345,12 +378,60 @@ class MainActivity : ComponentActivity() {
         bleScanner?.stopScan(leScanCallback)
     }
 
+
+    private fun startHeartRateMonitoring() {
+
+        if (isMeasuring) return //Prevents the double registration
+
+        heartRateCallback = object : MeasureCallback {
+            override fun onAvailabilityChanged(
+                dataType: DeltaDataType<*, *>,
+                availability: Availability
+            ) {
+                Log.d("Availability", "Availability: $availability")
+            }
+
+            override fun onDataReceived(data: DataPointContainer) {
+                val heartRateData = data.getData(DataType.HEART_RATE_BPM)
+                heartRateData.forEach { heartRate ->
+                    val bpm = heartRate.value
+                    Log.d("Heart Rate", "BPM: $bpm")
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            measureClient.registerMeasureCallback(
+                DataType.HEART_RATE_BPM,
+                heartRateCallback!!
+            )
+            isMeasuring = true
+        }
+    }
+
+    fun stopHeartRateMonitoring() {
+        val callback = heartRateCallback ?: return
+        if(!isMeasuring) return
+
+        lifecycleScope.launch {
+            measureClient.unregisterMeasureCallback(
+                DataType.HEART_RATE_BPM,
+                callback
+            )
+
+            heartRateCallback = null
+            isMeasuring = false
+        }
+
+    }
+
     private fun requestBluetoothPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val permissions = arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BODY_SENSORS,
             )
             ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
         } else {
@@ -365,7 +446,8 @@ class MainActivity : ComponentActivity() {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
                     ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-                    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS,) == PackageManager.PERMISSION_GRANTED
         } else {
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         }
@@ -383,39 +465,20 @@ class MainActivity : ComponentActivity() {
                 startBleScan()
             } else {
                 Toast.makeText(this, "Bluetooth permissions required", Toast.LENGTH_SHORT).show()
+                gettingRSSI = false
+                paused = true
+                stopwatch.pause()
             }
         }
     }
 
+
+    //This function runs whenever the app closes
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     override fun onDestroy() {
         super.onDestroy()
         stopBleScan()
+        stopHeartRateMonitoring()
         sensorManager.unregisterListener(accelerometerListener)
     }
 }
-
-
-
-// ---------- EXTRA (unneeded) CODE --------------
-    fun rssiParse(cmdOutput: String): String {
-        val rssiStringIndex: Int = cmdOutput.indexOf("RSSI: ")
-        val cmdParsed: String = cmdOutput.substring(rssiStringIndex+6, rssiStringIndex+9)
-        return cmdParsed
-    }
-
-    //Stores the code for gathering RSSI with SuperUser commands
-    fun commandRSSI() {
-        //My own command which uses a super-user shell console
-        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd wifi status"))
-
-        val stdout = process.inputStream.bufferedReader().use { it.readText() }
-        //val stderr = process.errorStream.bufferedReader().use { it.readText() }
-        //val exitCode = process.waitFor()
-
-        val rssiString: String = rssiParse(stdout)
-        Log.d("RSSI", rssiString)
-
-        val rssi: Int = rssiString.toInt()
-    }
-
