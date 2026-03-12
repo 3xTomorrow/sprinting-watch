@@ -41,6 +41,7 @@ import android.os.Vibrator
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.provider.ContactsContract
+import android.view.WindowManager
 import android.widget.EditText
 
 //IMPORTS HEALTH API
@@ -75,8 +76,8 @@ class MainActivity : ComponentActivity() {
 
     //Text
     private lateinit var reachGoalText: TextView
-    private lateinit var rssiText: TextView
     private lateinit var elapsedTimeText: TextView
+    private lateinit var maxBPMText: TextView
 
     //INPUT
     private lateinit var rssiInput: EditText
@@ -106,6 +107,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var measureClient: MeasureClient
     private var heartRateCallback: MeasureCallback? = null
     private var isMeasuring = false
+    private var maxBPMList: MutableList<Double> = mutableListOf(0.0)
 
     //EVENT FUNCTIONS
 
@@ -125,7 +127,6 @@ class MainActivity : ComponentActivity() {
 
                 // Update UI on main thread
                 runOnUiThread {
-                    rssiText.text = "$finishLineBeaconRSSI dBm"
 
                     finishLineBeaconRSSI?.let {
                         if(it > rssiThreshold) { //RSSI to reach finish line
@@ -156,7 +157,6 @@ class MainActivity : ComponentActivity() {
             super.onScanFailed(errorCode)
             runOnUiThread {
                 reachGoalText.text = "Scan failed with error: $errorCode"
-                rssiText.text = "Scan Failed"
                 isScanning = false
             }
         }
@@ -175,6 +175,7 @@ class MainActivity : ComponentActivity() {
 
             if(motion > sensorThreshold) {
                 if(!gettingRSSI) {
+                    maxBPMList.clear()
                     Log.d("LOG", "RACE STARTED!!!!")
                     stopwatch.start { millis ->
                         val seconds = millis / 1000
@@ -232,13 +233,16 @@ class MainActivity : ComponentActivity() {
             setContentView(R.layout.main_layout)
             vibrator?.vibrate(buttonVibration)
 
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            //window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
             resetButton = findViewById(R.id.reset_button)
             pauseButton = findViewById(R.id.pause_button)
 
             //Creates variables for the texts
             reachGoalText = findViewById(R.id.reachGoalText)
-            rssiText = findViewById(R.id.rssiText)
             elapsedTimeText = findViewById(R.id.elapsedTimeText)
+            maxBPMText = findViewById(R.id.bpm)
 
             //Creates variable for text input
             rssiInput = findViewById<EditText>(R.id.editTextNumber)
@@ -269,6 +273,7 @@ class MainActivity : ComponentActivity() {
                 paused = true
                 stopBleScan()
                 stopHeartRateMonitoring()
+                displayMaxBPM()
             }
 
             resetButton.setOnClickListener {
@@ -285,7 +290,6 @@ class MainActivity : ComponentActivity() {
                     elapsedTime = 0.00
                     runOnUiThread {
                         elapsedTimeText.text = "$elapsedTime"
-                        rssiText.text = "Not scanning"
                         reachGoalText.text = "Sprint Timer"
                     }
                 }
@@ -395,7 +399,8 @@ class MainActivity : ComponentActivity() {
                 val heartRateData = data.getData(DataType.HEART_RATE_BPM)
                 heartRateData.forEach { heartRate ->
                     val bpm = heartRate.value
-                    Log.d("Heart Rate", "BPM: $bpm")
+                    Log.d("BPM", bpm.toString());
+                    maxBPMList.add(bpm)
                 }
             }
         }
@@ -472,6 +477,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun displayMaxBPM() {
+        if(maxBPMList.isNotEmpty()) {
+            var maximumBPM  = maxBPMList.max()
+            maxBPMText.text = maximumBPM.toString() + " BPM";
+        } else {
+            Log.e("Display Error", "No values in Max BPM list")
+        }
+    }
 
     //This function runs whenever the app closes
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
